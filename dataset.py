@@ -216,7 +216,7 @@ class DatasetBuilder(object):
 
 	def _load(self):
 		pos = 0
-		label_file = open(self.label_path, 'r')
+		label_file = open(self.data_dir + '/' + self.label_path, 'r')
 		for line in label_file:
 			# ignore comments
 			if line.startswith('#'):

@@ -77,9 +77,9 @@ def main():
 		'max_objects': 3,
 		'batch_size': 16,
 		'epochs': 20,
-		'max_iterations': 100,
+		'max_iterations': 1000,
 		'moment': 0.9,
-		'learning_rate': 0.005
+		'learning_rate': 0.01
 	}
 	
 	net = Net(shared_params)
@@ -87,7 +87,7 @@ def main():
 	
 	solver = Solver(net, builder, shared_params)
 
-	solver.solve(False)
+	solver.solve(True)
 
 
 	# show example

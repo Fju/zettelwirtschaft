@@ -19,7 +19,7 @@ class Solver(object):
 		self.model_dir = 'model/'
 		self.summary_dir = 'summary/'
 		self.max_iterations = int(params['max_iterations'])
-	
+
 		self.net = net
 		self.dataset_builder = dataset_builder
 		#construct graph
@@ -62,7 +62,7 @@ class Solver(object):
 
 		summary_op = tf.summary.merge_all()
 		 
-		sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+		sess = tf.Session()
 
 		sess.run(init)
 		summary_writer = tf.summary.FileWriter(self.summary_dir, sess.graph)

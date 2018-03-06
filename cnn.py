@@ -8,7 +8,8 @@ class Net(object):
 		self.cell_count = int(params['cell_count'])
 		self.boxes_per_cell = int(params['boxes_per_cell'])
 		self.batch_size = int(params['batch_size'])
-		
+
+	
 		self.class_scale = 1.0
 		self.object_scale = 2.0
 		self.noobject_scale = 1.0
@@ -166,46 +167,55 @@ class Net(object):
 		self.dense_layer_index = 0
 		self.conv_layer_index = 0
 	
-		# 448	
-		conv_layer1 = self.conv2d(images, [3, 3, 3, 64])
-		pool_layer1 = self.max_pool(conv_layer1)
+		# 448
+		temp_conv = self.conv2d(images, [3, 3, 3, 64])
+		temp_pool = self.max_pool(temp_conv)
 
 		# 224
-		conv_layer2 = self.conv2d(pool_layer1, [3, 3, 64, 128])
-		pool_layer2 = self.max_pool(conv_layer2)
+		temp_conv = self.conv2d(temp_pool, [3, 3, 64, 128])
+		temp_pool = self.max_pool(temp_conv)
 		
 		# 112
-		conv_layer3 = self.conv2d(pool_layer2, [3, 3, 128, 128])
-		pool_layer3 = self.max_pool(conv_layer3)
+		temp_conv = self.conv2d(temp_pool, [3, 3, 128, 128])
+		temp_pool = self.max_pool(temp_conv)
 		
 		# 56
-		conv_layer4 = self.conv2d(pool_layer3, [3, 3, 128, 256])
-		pool_layer4 = self.max_pool(conv_layer4)
+		temp_conv = self.conv2d(temp_pool, [3, 3, 128, 256])
+		temp_pool = self.max_pool(temp_conv)
 
 		# 28
-		conv_layer5 = self.conv2d(pool_layer4, [3, 3, 256, 256])
-		pool_layer5 = self.max_pool(conv_layer5)
+		temp_conv = self.conv2d(temp_pool, [3, 3, 256, 256])
+		temp_pool = self.max_pool(temp_conv)
 
 		# 14
-		conv_layer6 = self.conv2d(pool_layer5, [3, 3, 256, 512])
-		pool_layer6 = self.max_pool(conv_layer6)
+		temp_conv = self.conv2d(temp_pool, [3, 3, 256, 512])
+		temp_pool = self.max_pool(temp_conv)
 
 		# 7
-		conv_layer7 = self.conv2d(pool_layer6, [3, 3, 512, 512])
-		conv_layer8 = self.conv2d(conv_layer7, [3, 3, 512, 512])
+		temp_conv = self.conv2d(temp_pool, [3, 3, 512, 512])
+		temp_pool = self.conv2d(temp_conv, [3, 3, 512, 512])
 
-		flat_layer = tf.reshape(conv_layer8, [-1, self.cell_count * self.cell_count * 512])
+		flat_layer = tf.reshape(temp_pool, [-1, self.cell_count * self.cell_count * 512])
 		
-		fc_layer1 = self.dense(flat_layer, self.cell_count * self.cell_count * 512, 4096)
-		fc_layer1 = tf.nn.dropout(fc_layer1, keep_prob=0.5)
-		fc_layer2 = self.dense(fc_layer1, 4096, self.cell_count * self.cell_count * (self.num_classes + self.boxes_per_cell * 5))
+		temp_dense = self.dense(flat_layer, self.cell_count * self.cell_count * 512, 4096)
+		temp_dense = tf.nn.dropout(temp_dense, keep_prob=0.5)
+		temp_dense = self.dense(temp_dense, 4096, self.cell_count * self.cell_count * (self.num_classes + self.boxes_per_cell * 5))
 	
 		n1 = self.cell_count * self.cell_count * self.num_classes # classification
 		n2 = n1 + self.cell_count * self.cell_count * self.boxes_per_cell # box
 
-		class_probs = tf.reshape(fc_layer2[:, 0:n1], (-1, self.cell_count, self.cell_count, self.num_classes))
-		confidence = tf.reshape(fc_layer2[:, n1:n2], (-1, self.cell_count, self.cell_count, self.boxes_per_cell))
-		boxes = tf.reshape(fc_layer2[:, n2:], (-1, self.cell_count, self.cell_count, self.boxes_per_cell * 4))
+		class_probs = tf.reshape(temp_dense[:, 0:n1], (-1, self.cell_count, self.cell_count, self.num_classes))
+		confidence = tf.reshape(temp_dense[:, n1:n2], (-1, self.cell_count, self.cell_count, self.boxes_per_cell))
+		boxes = tf.reshape(temp_dense[:, n2:], (-1, self.cell_count, self.cell_count, self.boxes_per_cell * 4))
+
+		# apply sigmoid function to center coordinates and exponential function to width and height of the bounding box
+		# described in the "YOLO9000:Better, Faster, Stronger" documentation (source: https://arxiv.org/pdf/1612.08242.pdf, page 4)
+		centers = tf.nn.sigmoid(boxes[:,:,:,0:2])
+		sizes = tf.exp(boxes[:,:,:,2:4])
+
+		boxes = tf.Print(boxes, [tf.shape(centers), tf.shape(sizes)], 'Shape of splitted tensors', summarize=5)
+	
+		boxes = tf.concat([centers, sizes], 3)
 
 		predictions = tf.concat([class_probs, confidence, boxes], 3)
 		
@@ -304,6 +314,7 @@ class Net(object):
 		# get predicted bounding box coordinates in 3-D tensors of size [cell_count, cell_count, boxes_per_cell]
 		p_x = predict_boxes[:, :, :, 0]
 		p_y = predict_boxes[:, :, :, 1]
+
 		p_sqrt_w = tf.sqrt(tf.minimum(self.image_size * 1.0, tf.maximum(0.0, predict_boxes[:, :, :, 2])))
 		p_sqrt_h = tf.sqrt(tf.minimum(self.image_size * 1.0, tf.maximum(0.0, predict_boxes[:, :, :, 3])))
 
