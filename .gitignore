@@ -1,0 +1,5 @@
+tensorflow/
+summary/
+model/
+train_data/
+*.pyc
