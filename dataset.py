@@ -192,11 +192,18 @@ class DataEntry(object):
 			return True, segment, segment_boxes, box_count
 
 
+
+# constants
+BOX_THICKNESS	= 2
+BOX_COLOR		= (170, 200, 0)
+WINDOW_NAME		= 'Dataset Investigator'
+
 class DatasetBuilder(object):
 	# class enumeration
 	CLASS_LOGO	= 0
 	CLASS_PRICE	= 1
 	CLASS_DATE	= 2
+
 
 	def __init__(self, label_path, data_dir, params):
 		self.label_path = label_path
@@ -244,18 +251,49 @@ class DatasetBuilder(object):
 			# increment line position
 			pos += 1
 
-#	def getBoxes(self, pos):
-#		_, img, boxes, box_count = self.data[pos].augment(480, rotate=1.0, keepEmpty=True)		
-#		
-#		for box in boxes:
-#			cx, cy, w, h = box[:4]
-#			cv2.rectangle(img, (cx - w / 2, cy - h / 2), (cx + w / 2, cy + h / 2), (170,200,0), 2)
-#
-#		return img
 
-	def batch(self):
+	def investigate(self, images, labels, box_cnt):
+		""" creating a window showing the single images and respective bounding boxes of the current datasets images
+		Args:
+			images:		4-D ndarray [batch_size, image_size, image_size, 3]
+			labels:		3-D ndarray [batch_size, max_objects, 5] (cx, cy, width, height, class_num)
+			box_cnt:	1-D ndarray [batch_size]
+		"""
+		
+		pos = 0
+		while True:
+			canvas = images[pos] # load current image, use it as canvas to draw bounding boxes onto it
+
+			for i in range(box_cnt[pos]):
+				cx, cy, w, h = labels[pos, i, :4]
+				# draw bounding box
+				cv2.rectangle(canvas, (int(cx - w / 2), int(cy - h / 2)), (int(cx + w / 2), int(cy + h / 2)), BOX_COLOR, BOX_THICKNESS)
+	
+			# show image	
+			cv2.imshow(WINDOW_NAME, canvas)
+
+			key = cv2.waitKey(0)
+			if key == 1113939:
+				# right arrow key, move to next image
+				pos += 1
+			elif key == 1113937:
+				# left arrow key, move to previous image
+				pos -= 1
+			elif key == 1048603:
+				# escape key, quit loop
+				break
+
+			# prevent out of bounds
+			pos = (pos + self.batch_size) % self.batch_size
+		
+		# quit investigator
+		cv2.destroyAllWindows()
+
+	def batch(self, investigate=False):
 		""" generate batch containing images and related labels of `image_size`
 			returns training data
+		Args:
+			investigate: boolean, if True it lets the user investigate the dataset with a minimal GUI
 		Returns:
 			images: 4-D ndarray [batch_size, image_size, image_size, 3]
 			labels: 3-D ndarray [batch_size, max_objects, 5]
@@ -306,6 +344,9 @@ class DatasetBuilder(object):
 		# store as latest_batch
 		self.latest_batch = [b_images, b_labels, b_box_count]
 
-		print(b_box_count)
+		if investigate:
+			# let user investigate newly created batch
+			self.investigate(b_images, b_labels, b_box_count)
+
 		return b_images, b_labels, b_box_count
 

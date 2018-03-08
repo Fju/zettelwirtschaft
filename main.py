@@ -13,6 +13,17 @@ LABEL_PATH = 'labels'
 DATA_DIR = 'train_data'
 MODEL_DIR = 'model'
 
+# setup CLI argument parser
+parser = argparse.ArgumentParser()
+parser.add_argument("-i", "--investigate",
+	help="Let user investigate newly created datasets before they are used for training",
+	action="store_true")
+
+parser.add_argument("-b", '--batch_size',
+	help="Set size of batch",
+	default=16,
+    type=int)
+
 
 def process_predicts(predicts):
 	class_probs = predicts[0, :, :, :3]
@@ -69,6 +80,12 @@ def process_predicts(predicts):
 	return boxes
 
 def main():
+	args = parser.parse_args()
+
+	print('Parsed arguments', args.investigate, args.batch_size)
+	
+	# TODO: embed arguments into param dictionary
+	
 	shared_params = {
 		'image_size': 448,
 		'num_classes': 3,
@@ -79,7 +96,8 @@ def main():
 		'epochs': 20,
 		'max_iterations': 1000,
 		'moment': 0.9,
-		'learning_rate': 0.01
+		'learning_rate': 0.01,
+		'investigate': False
 	}
 	
 	net = Net(shared_params)
@@ -126,27 +144,6 @@ def main():
 		
 	cv2.imshow('result', resized_img)
 	cv2.waitKey(0)
-
-	"""
-	d = DatasetBuilder('labels', 'data')
-	p = 0
-	while(1):
-		print(p)
-		img = d.getBoxes(p)
-		cv2.imshow('image', img)
-		key = cv2.waitKey(0)
-		if key == 1113939:
-			p += 1
-		elif key == 1113937:
-			p -= 1
-		elif key == 1048603:
-			break
-		
-		max_p = len(d.data)
-		p = (p + max_p) % max_p
-
-	cv2.destroyAllWindows()
-	"""
 
 if __name__ == '__main__':
 		main()

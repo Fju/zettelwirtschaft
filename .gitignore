@@ -1,5 +1,5 @@
 tensorflow/
 summary/
-model/
+checkpoints/
 train_data/
 *.pyc
