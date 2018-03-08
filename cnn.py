@@ -67,11 +67,6 @@ class Net(object):
 		initializer = tf.constant_initializer(constant, dtype=tf.float32)
 		return self._variable_on_cpu('biases', shape, initializer)
 
-	def global_step(self):
-		with tf.variable_scope('global_step', reuse=tf.AUTO_REUSE):
-			var = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
-			return var	
-
 	def conv2d(self, x, kernel, stride=1):
 		""" create one convolution layer and init weight and bias variables
 		Args:
