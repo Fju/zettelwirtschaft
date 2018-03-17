@@ -114,7 +114,7 @@ class Net(object):
 			return tf.nn.leaky_relu(tf.nn.bias_add(tf.matmul(x, weights), biases), alpha=0.1)
 
 	def iou(self, p_boxes, t_box):
-		""" calculate ious
+		""" calculate ious (iou: intersection over union)
 		Args:
 			p_boxes: predicted boxes 4-D tensor [cell_count, cell_count, boxes_per_cell, 4]	====> (x_center, y_center, w, h)
 				t_box: true box 1-D tensor [4] ===> (x_center, y_center, w, h)
@@ -153,7 +153,7 @@ class Net(object):
 		
 		# IoU: Intersection over Union (see https://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/)
 		# Union is equal to the sum of both areas minus the intersection
-		return inter_square / (square1 + square2 - inter_square + 1e-6)
+		return inter_square / (square1 + square2 - inter_square + 1e-6) # add tiny fraction to prevent divison by 0
 
 
 	def build(self, images):

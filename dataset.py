@@ -213,6 +213,7 @@ class DatasetBuilder(object):
 		self.epochs = int(params['epochs'])
 		self.max_objects = int(params['max_objects'])
 		self.image_size = int(params['image_size'])
+		self.cell_count = int(params['cell_count'])
 
 		self.batch_pos = 0
 		self.epochs_pos = 0
@@ -242,6 +243,7 @@ class DatasetBuilder(object):
 			if pos != 0:
 				# skip header for now
 				image = cv2.imread('%s/%s.jpg' % (self.data_dir, attr[0]))
+				image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 				entry = DataEntry(image)
 				for i in range(1, 4):
 					entry.addBox(attr[i], i - 1)
@@ -289,6 +291,58 @@ class DatasetBuilder(object):
 		# quit investigator
 		cv2.destroyAllWindows()
 
+	def validate(self, image, predicts, threshold=0.01):
+		""" creating a window showing the predicted results on a test image, can be used for validation of the network
+		Args:
+			image:		image that was processed by the network
+			predicts:	the networks predictions
+			threshold:	confidence must be higher than this in order to display the prediction
+		"""
+		class_probs = predicts[0, :, :, :3]
+		confidence = predicts[0, :, :, 3:4]
+		coordinates = predicts[0, :, :, 4:]
+
+		class_probs = np.reshape(class_probs, (7, 7, 3))
+		confidence = np.reshape(confidence, (7, 7, 1))
+
+		P = confidence * class_probs
+
+		coordinates = np.reshape(coordinates, (7, 7, 4))
+
+		# find boxes with enough confidence
+		indexes = []
+		for y in range(7):
+			for x in range(7):
+				class_index = np.unravel_index(np.argmax(P[y,x]), (3))
+				
+				confidence = P[y,x,class_index]
+				print(confidence)
+				if confidence > threshold:
+					print('found likely box %.3f' % confidence)
+					indexes.append([class_index, x, y])
+		
+	
+		for class_num, x, y in indexes:
+			cx, cy, w, h = coordinates[y,x]
+			
+			cx = (x + cx) * (self.image_size / self.cell_count)
+			cy = (y + cy) * (self.image_size / self.cell_count)
+
+			w = w * self.image_size
+			h = h * self.image_size
+
+			left = int(cx - w / 2.0)
+			top = int(cy - h / 2.0)
+			right = int(left + w)
+			bottom = int(top + h)
+
+			cv2.rectangle(image, left, top, right, bottom, (0, 0, 255))
+			cv2.putText(image, str(class_num), left, top, 2, 1.5, (0, 0, 255))
+
+		cv2.imshow('Validation', image)
+		cv2.waitKey(0)
+
+
 	def batch(self, investigate=False):
 		""" generate batch containing images and related labels of `image_size`
 			returns training data
@@ -334,7 +388,8 @@ class DatasetBuilder(object):
 			labels = np.zeros([self.max_objects, 5], dtype=np.float32)
 			for j in range(cnt):
 				labels[j] = boxes[j]
-		
+			
+			image = image.astype(np.float32)
 			image = 1.0 - image / 255.0
 
 			b_labels[i,:,:] = labels
