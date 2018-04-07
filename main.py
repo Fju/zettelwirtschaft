@@ -50,9 +50,9 @@ def main():
 		'max_objects': 3,
 		'batch_size': 16,
 		'epochs': 50,
-		'max_iterations': 1000,
+		'max_iterations': 2,
 		'learning_rate_decay': 0.9,
-		'learning_rate': 0.001,
+		'learning_rate': 0.005,
 		'investigate': False
 	}
 	

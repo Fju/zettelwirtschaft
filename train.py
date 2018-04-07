@@ -25,8 +25,6 @@ class Solver(object):
 
 		self.net = net
 		self.dataset_builder = dataset_builder
-		#construct graph
-		self.construct_graph()
 
 	def _train(self):
 		""" create an optimizer and apply to all trainable variables.
@@ -46,7 +44,7 @@ class Solver(object):
 
 	def construct_graph(self):
 		""" defining input placeholders, build network and link with loss and train operation """
-		self.global_step = tf.Variable(0, trainable=False, name='global_step')
+		self.global_step = self.net.create_global_step()
 
 		self.images = tf.placeholder(tf.float32, (self.batch_size, self.image_size, self.image_size, 3))
 		self.labels = tf.placeholder(tf.float32, (self.batch_size, self.max_objects, 5))
@@ -65,7 +63,9 @@ class Solver(object):
 			restore: if `True` it restores the latest checkpoint, otherwise it starts training a "blank" network
 		"""
 
-		saver = tf.train.Saver(write_version=tf.train.SaverDef.V2)
+		self.construct_graph()
+
+		saver = tf.train.Saver(self.net.var_collection, write_version=tf.train.SaverDef.V2)
 		
 		# create session variable
 		sess = tf.Session()
@@ -116,25 +116,18 @@ class Solver(object):
 		
 		# save final checkpoint
 		print('Finished training')
-		saver.save(sess, self.model_dir + 'model.ckpt', global_step=self.global_step)
+		saver.save(sess, self.checkpoint_dir + 'model.ckpt', global_step=self.global_step)
 
 		sys.stdout.flush()
 		sess.close()
 
 	def validate(self, image_path):
 		sess = tf.Session()
-
+		
 		image = tf.placeholder(tf.float32, (1, self.image_size, self.image_size, 3))
-		predicts = self.net.build(image)
+		predicts = self.net.build(image, dropout=0.0)
 
-		np_img = cv2.imread(image_path)
-		np_img = cv2.resize(np_img, (self.image_size, self.image_size))
-		np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
-
-		inv_img = np_img.astype(np.float32)
-		inv_img = 1.0 - inv_img / 255.0
-		inv_img = np.reshape(inv_img, (1, self.image_size, self.image_size, 3))
-
+		sess.run(tf.global_variables_initializer())
 	
 		saver = tf.train.Saver(write_version=tf.train.SaverDef.V2)
 
@@ -144,12 +137,20 @@ class Solver(object):
 			return
 	
 		saver.restore(sess, latest_checkpoint)
-	
+
+		np_img = cv2.imread(image_path)
+		np_img = cv2.resize(np_img, (self.image_size, self.image_size))
+		np_img = cv2.cvtColor(np_img, cv2.COLOR_BGR2RGB)
+
+		inv_img = np_img.astype(np.float32)
+		inv_img = 1.0 - inv_img / 255.0
+		inv_img = np.reshape(inv_img, (1, self.image_size, self.image_size, 3))
+
 		start = time.time()
 		result = sess.run(predicts, feed_dict={image: inv_img})
 		duration = time.time() - start
 	
-		print('Computation time: %.5f' % duration)
+		print('Computation time: %.2fms' % (duration * 1000))
 		
 		return np_img, result
 

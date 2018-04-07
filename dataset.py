@@ -313,7 +313,7 @@ class DatasetBuilder(object):
 		indexes = []
 		for y in range(7):
 			for x in range(7):
-				class_index = np.unravel_index(np.argmax(P[y,x]), (3))
+				class_index = np.unravel_index(np.argmax(P[y,x]), (3))[0]
 				
 				confidence = P[y,x,class_index]
 				print(confidence)
@@ -336,8 +336,8 @@ class DatasetBuilder(object):
 			right = int(left + w)
 			bottom = int(top + h)
 
-			cv2.rectangle(image, left, top, right, bottom, (0, 0, 255))
-			cv2.putText(image, str(class_num), left, top, 2, 1.5, (0, 0, 255))
+			cv2.rectangle(image, (left, top), (right, bottom), (0, 0, 255))
+			cv2.putText(image, str(class_num), (left, top), 2, 1.5, (0, 0, 255))
 
 		cv2.imshow('Validation', image)
 		cv2.waitKey(0)

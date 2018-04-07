@@ -15,7 +15,7 @@ class Net(object):
 		self.noobject_scale = 1.0
 		self.coord_scale = 5.0
 
-		self.trainable_collection = []
+		self.var_collection = []
 
 		self.conv_layer_index = 0
 		self.dense_layer_index = 0
@@ -31,11 +31,11 @@ class Net(object):
 		"""
 		with tf.device('/cpu:0'):
 			var = tf.get_variable(name, shape, initializer=initializer, dtype=tf.float32)
-			self.trainable_collection.append(var)
+			self.var_collection.append(var)
 		return var 
 
 
-	def _weight_var(self, shape, stddev=0.005, wd=0.0005):
+	def _weight_var(self, shape, stddev=0.005):
 		""" helper function to create a weight variable tensor, initialized with a random number
 		Args:
 			name:	name of the variable 
@@ -49,9 +49,9 @@ class Net(object):
 
 		var = self._variable_on_cpu('weights', shape, initializer)
 
-		if wd is not None:
-			weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-			tf.add_to_collection('losses', weight_decay)
+#		if wd is not None:
+#			weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
+#			tf.add_to_collection('losses', weight_decay)
 
 		return var
 	
@@ -66,6 +66,11 @@ class Net(object):
 		"""
 		initializer = tf.constant_initializer(constant, dtype=tf.float32)
 		return self._variable_on_cpu('biases', shape, initializer)
+
+	def create_global_step(self):
+		var = tf.Variable(0, name='global_step', trainable=False)
+		self.var_collection.append(var)
+		return var
 
 	def conv2d(self, x, kernel, stride=1):
 		""" create one convolution layer and init weight and bias variables
@@ -156,7 +161,7 @@ class Net(object):
 		return inter_square / (square1 + square2 - inter_square + 1e-6) # add tiny fraction to prevent divison by 0
 
 
-	def build(self, images):
+	def build(self, images, dropout=0.5):
 		""" build convolutional neural network
 		Args:
 			images: input images 4-D [batch_size, image_size, image_size, 3] ==> (r, g, b)
@@ -198,7 +203,7 @@ class Net(object):
 		flat_layer = tf.reshape(temp_pool, [-1, self.cell_count * self.cell_count * 512])
 		
 		temp_dense = self.dense(flat_layer, self.cell_count * self.cell_count * 512, 4096)
-		temp_dense = tf.nn.dropout(temp_dense, keep_prob=0.5)
+		temp_dense = tf.nn.dropout(temp_dense, keep_prob=1-dropout)
 		temp_dense = self.dense(temp_dense, 4096, self.cell_count * self.cell_count * (self.num_classes + self.boxes_per_cell * 5))
 	
 		n1 = self.cell_count * self.cell_count * self.num_classes # classification
@@ -213,7 +218,6 @@ class Net(object):
 		centers = tf.nn.sigmoid(boxes[:,:,:,0:2])
 		sizes = tf.exp(boxes[:,:,:,2:4])
 
-		boxes = tf.Print(boxes, [tf.shape(centers), tf.shape(sizes)], 'Shape of splitted tensors', summarize=5)
 	
 		boxes = tf.concat([centers, sizes], 3)
 
