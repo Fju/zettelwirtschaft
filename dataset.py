@@ -263,7 +263,8 @@ class DatasetBuilder(object):
 		"""
 		
 		pos = 0
-		while True:
+		key = 0
+		while key != 1048603:
 			canvas = images[pos] # load current image, use it as canvas to draw bounding boxes onto it
 
 			for i in range(box_cnt[pos]):
@@ -275,16 +276,14 @@ class DatasetBuilder(object):
 			cv2.imshow(WINDOW_NAME, canvas)
 
 			key = cv2.waitKey(0)
+
 			if key == 1113939:
 				# right arrow key, move to next image
 				pos += 1
 			elif key == 1113937:
 				# left arrow key, move to previous image
 				pos -= 1
-			elif key == 1048603:
-				# escape key, quit loop
-				break
-
+		
 			# prevent out of bounds
 			pos = (pos + self.batch_size) % self.batch_size
 		
@@ -341,6 +340,7 @@ class DatasetBuilder(object):
 
 		cv2.imshow('Validation', image)
 		cv2.waitKey(0)
+		cv2.destroyAllWindows()
 
 
 	def batch(self, investigate=False):

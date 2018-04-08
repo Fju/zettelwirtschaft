@@ -323,13 +323,17 @@ class Net(object):
 		p_sqrt_h = tf.sqrt(tf.minimum(self.image_size * 1.0, tf.maximum(0.0, predict_boxes[:, :, :, 3])))
 
 		# create 1-D tensor of size [num_classes] filled with zeros except one 1 at the position of the true class
+		# apply tensor to [cell_count, cell_count, 1] tensor
 		t_class = tf.one_hot(tf.cast(label[4], tf.int32), self.num_classes, dtype=tf.float32)
+		t_class = t_class * tf.reshape(t_region_mask, (self.cell_count, self.cell_count, 1))
 
 		# get predicted class tensor of size [cell_count, cell_count, num_classes]
 		p_class = prediction[:, :, 0:self.num_classes]
+		p_class = p_class * tf.reshape(t_region_mask, (self.cell_count, self.cell_count, 1))
 
-		# compute loss of predicting right class
-		class_loss = tf.nn.l2_loss(tf.reshape(t_region_mask, (self.cell_count, self.cell_count, 1)) * (p_class - t_class)) * self.class_scale
+		# compute loss of predicting true class
+		# OLD: class_loss = tf.nn.l2_loss(tf.reshape(t_region_mask, (self.cell_count, self.cell_count, 1)) * (p_class - t_class)) * self.class_scale
+		class_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits_v2(labels=t_class, logits=p_class) * self.class_scale)
 
 		# compute loss of detecting objects correctly
 		object_loss = tf.nn.l2_loss(masked_iou * (p_confidence - t_confidence)) * self.object_scale

@@ -19,7 +19,7 @@ parser.add_argument('-i', '--investigate',
 	help='Let user investigate newly created datasets before they are used for training',
 	action='store_true')
 
-parser.add_argument('-b', '--batch_size',
+parser.add_argument('-b', '--batch-size',
 	help='Set size of batch',
 	default=16,
     type=int)
@@ -48,12 +48,12 @@ def main():
 		'cell_count': 7,
 		'boxes_per_cell': 1,
 		'max_objects': 3,
-		'batch_size': 16,
+		'batch_size': args.batch_size,
 		'epochs': 50,
-		'max_iterations': 2,
+		'max_iterations': 1000,
 		'learning_rate_decay': 0.9,
 		'learning_rate': 0.005,
-		'investigate': False
+		'investigate': args.investigate
 	}
 	
 	net = Net(shared_params)
@@ -65,7 +65,7 @@ def main():
 	else:
 		# TODO: better method names!
 		image, predictions = solver.validate('test_image.jpg')
-		builder.validate(image, predictions)
+		builder.validate(image, predictions, threshold=0)
 
 
 if __name__ == '__main__':
