@@ -29,12 +29,15 @@ When executing `main.py`, you can use the following command-line options
 | option | type | description | default |
 |--------|------|-------------|---------|
 | `--batch-size` | integer | Size of training batch | `16` |
-| `--investigate` | flag <sup>[1](#footnote1)</sup> | Shows GUI to let the user view all entries of the current batch used for training | `False` |
-| `--restore` | flag <sup>[1](#footnote1)</sup> | If `True` restores the latest checkpoint (if it exists) and keeps on training | `False` |
-| `--no-training` | flag <sup>[1](#footnote1)</sup> | If `True` no training process will be started, instead the latest checkpoint will be validated | `False` |
+| `--summarize` | flag | If `True` writes a summary into the summary directory. Summaries can be reviewed using `tensorboard`. This option may get replaced in the future by an option where the frequency of logs can be specified. |
+| `--investigate` | flag  | Shows GUI to let the user view all entries of the current batch used for training. | `False` |
+| `--restore` | flag  | If `True` restores the latest checkpoint (if it exists) and keeps on training. | `False` |
+| `--no-training` | flag | If `True` no training process will be started, instead the latest checkpoint will be validated. | `False` |
+
+Note: flag is a boolean, that is always `False` when not present as an argument, if present the option will be `True` respectively.
 
 
-
-<a id="footnote1">1</a>: always `False` when not present, if used the option will be `True` respectively
-
-__Example:__ `$ python main.py --batch-size 10 --investigate`
+__Example:__ 
+```
+$ python main.py --batch-size 10 --investigate
+```
