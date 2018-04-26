@@ -22,6 +22,7 @@ class Solver(object):
 		self.max_iterations = int(params['max_iterations'])
 		self.epochs = int(params['epochs'])
 		self.investigate = params['investigate']
+		self.summarize = params['summarize']
 
 		self.net = net
 		self.dataset_builder = dataset_builder
@@ -35,17 +36,15 @@ class Solver(object):
 		lr = tf.train.exponential_decay(self.learning_rate, self.global_step, self.epochs, self.learning_rate_decay, staircase=True)
 		opt = tf.train.AdagradOptimizer(lr)
 		grads = opt.compute_gradients(self.total_loss)
-
+		
 		tf.summary.scalar('learning_rate', lr)
 
-		apply_gradient_op = opt.apply_gradients(grads, global_step=self.global_step)
-
-		return apply_gradient_op
+		return opt.apply_gradients(grads, global_step=self.global_step)
 
 	def construct_graph(self):
 		""" defining input placeholders, build network and link with loss and train operation """
-		self.global_step = self.net.create_global_step()
 
+		self.global_step = self.net.create_global_step()
 		self.images = tf.placeholder(tf.float32, (self.batch_size, self.image_size, self.image_size, 3))
 		self.labels = tf.placeholder(tf.float32, (self.batch_size, self.max_objects, 5))
 		self.object_counts = tf.placeholder(tf.int32, (self.batch_size))
@@ -66,14 +65,22 @@ class Solver(object):
 		self.construct_graph()
 
 		saver = tf.train.Saver(self.net.var_collection, write_version=tf.train.SaverDef.V2)
-		
+
+		# specify how much memory it is allowed to use
+		config = tf.ConfigProto()
+		config.gpu_options.allow_growth = True
+
 		# create session variable
-		sess = tf.Session()
+		sess = tf.Session(config=config)
 		# init all variables
 		sess.run(tf.global_variables_initializer())
 
+		
 		# summary_writer is used to log the important loss values or the learning rate for easy insights
-		summary_writer = tf.summary.FileWriter(self.summary_dir, sess.graph)
+		# TODO: better implementation of `summarize` option
+		summary_writer = None
+		if self.summarize:
+			summary_writer = tf.summary.FileWriter(self.summary_dir, sess.graph)
 		summary_op = tf.summary.merge_all()
 
 		# find latest checkpoint
@@ -92,7 +99,6 @@ class Solver(object):
 			b_images, b_labels, b_object_counts = self.dataset_builder.batch(self.investigate)
 		
 			_, summary_str, loss_value = sess.run([self.train_op, summary_op, self.total_loss], feed_dict={self.images: b_images, self.labels: b_labels, self.object_counts: b_object_counts})
-			#loss_value, nilboy = sess.run([self.total_loss, self.nilboy], feed_dict={self.images: np_images, self.labels: np_labels, self.objects_num: np_objects_num})
 
 			duration = time.time() - start_time
 
@@ -107,7 +113,7 @@ class Solver(object):
 			format_str = ('step %d, loss = %.4f (%.1f examples/sec; %.3f sec/batch)')
 			print(format_str % (step, loss_value, examples_per_sec, sec_per_batch))
 
-			if step % 10 == 0:
+			if step % 10 == 0 and self.summarize:				
 				summary_writer.add_summary(summary_str, step)
 			
 			if step % 200 == 0 and step != 0:

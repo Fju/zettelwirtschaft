@@ -2,6 +2,26 @@
 
 Real-time YOLOv2 object detector using Tensorflow (in Python) for recognizing parts of a super market receipt.
 
+## Dataset
+
+I currently maintain a dataset for training and validation of the model that contains 35 images. I collected these supermarket receipts, took pictures of them and labeled them respectively. Due to privacy I can't publish the dataset here. If you want to evaluate your own model, you have to collect and label your dataset by yourself.
+You can, however, contribute to this project by sending labeled examples to me. The bigger the dataset the model is trained with, the better it will perform!
+
+Here's how I formatted my label list:
+```
+kb_0001;424,47,136,48;659,270,108,59;573,700,108,35;lidl;0.99;15.11.17
+```
+Attributes are separated by semi-colons (`;`) and represent following properties of the receipt (left to right):
+
+1. __filename__: the filename of the image (`.png` format)
+2. __logo position__: coordinates and size (`x,y,width,height`) of the bounding box where the logo is located in the image
+3. __price position__: coordinates and size (`x,y,width,height`) of the bounding box where the price is located in the image
+4. __date position__: coordinates and size (`x,y,width,height`) of the bounding box where the date is located in the image
+5. __supermarket__: name of the supermarket according to the logo
+6. __price__: total of the receipt, decimal number ignoring currency (for now)
+7. __date__: date when the receipt was printed (european format: `DD.MM.YYYY`)
+
+
 ## Command-Line options
 
 When executing `main.py`, you can use the following command-line options

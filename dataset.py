@@ -263,8 +263,7 @@ class DatasetBuilder(object):
 		"""
 		
 		pos = 0
-		key = 0
-		while key != 1048603:
+		while True:
 			canvas = images[pos] # load current image, use it as canvas to draw bounding boxes onto it
 
 			for i in range(box_cnt[pos]):
@@ -276,20 +275,21 @@ class DatasetBuilder(object):
 			cv2.imshow(WINDOW_NAME, canvas)
 
 			key = cv2.waitKey(0)
-
 			if key == 1113939:
 				# right arrow key, move to next image
 				pos += 1
 			elif key == 1113937:
 				# left arrow key, move to previous image
 				pos -= 1
+			elif key == 1048603:
+				# TODO: debug this, window doesn't closes and crashes after few seconds
+				cv2.destroyAllWindows()
+				return
 		
 			# prevent out of bounds
 			pos = (pos + self.batch_size) % self.batch_size
-		
-		# quit investigator
-		cv2.destroyAllWindows()
 
+	# TODO: program function for validating the model (generate validation batch, function for calculating the model's accuracy
 	def validate(self, image, predicts, threshold=0.01):
 		""" creating a window showing the predicted results on a test image, can be used for validation of the network
 		Args:
@@ -364,7 +364,7 @@ class DatasetBuilder(object):
 		# otherwise generate new batch		
 		pos = self.batch_pos
 		raw_batch = []
-		while pos != self.batch_size:
+		while len(raw_batch) != self.batch_size:
 			# pick one entry
 			entry = self.data[pos % len(self.data)]
 			# augment

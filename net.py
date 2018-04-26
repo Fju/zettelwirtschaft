@@ -12,7 +12,7 @@ class Net(object):
 	
 		self.class_scale = 1.0
 		self.object_scale = 2.0
-		self.noobject_scale = 1.0
+		self.noobject_scale = 0.5
 		self.coord_scale = 5.0
 
 		self.var_collection = []
@@ -35,7 +35,7 @@ class Net(object):
 		return var 
 
 
-	def _weight_var(self, shape, stddev=0.005):
+	def _weight_var(self, shape, stddev=0.005, wd=0.0001):
 		""" helper function to create a weight variable tensor, initialized with a random number
 		Args:
 			name:	name of the variable 
@@ -49,9 +49,9 @@ class Net(object):
 
 		var = self._variable_on_cpu('weights', shape, initializer)
 
-#		if wd is not None:
-#			weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-#			tf.add_to_collection('losses', weight_decay)
+		if wd is not None:
+			weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
+			tf.add_to_collection('losses', weight_decay)
 
 		return var
 	
@@ -60,7 +60,7 @@ class Net(object):
 		Args:
 			name: name of variable
 			shape: array of dimension sizes
-			constant: balue of variable when initialized
+			constant: value of variable when initialized
 		Returns:
 			variable tensor
 		"""
@@ -87,7 +87,7 @@ class Net(object):
 			# init variable in specific scope
 			weights = self._weight_var(kernel)
 			biases = self._bias_var([kernel[-1]])
-			# pipe input through convolution, addition of biases and ReLU
+			# convolve input, add biases, apply leaky-ReLU
 			return tf.nn.leaky_relu(tf.nn.bias_add(tf.nn.conv2d(x, weights, strides=[1, stride, stride, 1], padding='SAME'), biases), alpha=0.1)
 
 	def max_pool(self, x, stride=2):
@@ -115,7 +115,7 @@ class Net(object):
 			# init variable in specific scope
 			weights = self._weight_var([input_depth, output_depth])
 			biases = self._bias_var([output_depth])
-			# pipe input through weight multiplication, addition of biases and ReLU
+			# multiply weight matrix, add biases, apply leaky-ReLU
 			return tf.nn.leaky_relu(tf.nn.bias_add(tf.matmul(x, weights), biases), alpha=0.1)
 
 	def iou(self, p_boxes, t_box):
@@ -161,50 +161,55 @@ class Net(object):
 		return inter_square / (square1 + square2 - inter_square + 1e-6) # add tiny fraction to prevent divison by 0
 
 
-	def build(self, images, dropout=0.5):
+	def build(self, images, dropout=0.3):
 		""" build convolutional neural network
 		Args:
 			images: input images 4-D [batch_size, image_size, image_size, 3] ==> (r, g, b)
 		Return:
 			predicts: cnn results 4-D tensor
 		"""
-
-		self.dense_layer_index = 0
-		self.conv_layer_index = 0
 	
+		self.dense_layer_index = 0
+		self.conv_layer_index = 0	
+	
+		#with tf.device('/device:GPU:0'):		
 		# 448
-		temp_conv = self.conv2d(images, [3, 3, 3, 64])
+		temp_conv = self.conv2d(images, [3, 3, 3, 32])
 		temp_pool = self.max_pool(temp_conv)
 
 		# 224
-		temp_conv = self.conv2d(temp_pool, [3, 3, 64, 128])
+		temp_conv = self.conv2d(temp_pool, [3, 3, 32, 64])
 		temp_pool = self.max_pool(temp_conv)
 		
 		# 112
-		temp_conv = self.conv2d(temp_pool, [3, 3, 128, 128])
+		temp_conv = self.conv2d(temp_pool, [3, 3, 64, 64])
 		temp_pool = self.max_pool(temp_conv)
 		
 		# 56
-		temp_conv = self.conv2d(temp_pool, [3, 3, 128, 256])
+		temp_conv = self.conv2d(temp_pool, [3, 3, 64, 128])
 		temp_pool = self.max_pool(temp_conv)
 
 		# 28
-		temp_conv = self.conv2d(temp_pool, [3, 3, 256, 256])
+		temp_conv = self.conv2d(temp_pool, [3, 3, 128, 128])
 		temp_pool = self.max_pool(temp_conv)
 
 		# 14
-		temp_conv = self.conv2d(temp_pool, [3, 3, 256, 512])
+		temp_conv = self.conv2d(temp_pool, [3, 3, 128, 128])
 		temp_pool = self.max_pool(temp_conv)
 
 		# 7
-		temp_conv = self.conv2d(temp_pool, [3, 3, 512, 512])
-		temp_pool = self.conv2d(temp_conv, [3, 3, 512, 512])
+		temp_conv = self.conv2d(temp_pool, [3, 3, 128, 256])
 
-		flat_layer = tf.reshape(temp_pool, [-1, self.cell_count * self.cell_count * 512])
+
+		flat_layer = tf.reshape(temp_conv, [-1, self.cell_count * self.cell_count * 256])
 		
-		temp_dense = self.dense(flat_layer, self.cell_count * self.cell_count * 512, 4096)
+		temp_dense = self.dense(flat_layer, self.cell_count * self.cell_count * 256, 512)
 		temp_dense = tf.nn.dropout(temp_dense, keep_prob=1-dropout)
-		temp_dense = self.dense(temp_dense, 4096, self.cell_count * self.cell_count * (self.num_classes + self.boxes_per_cell * 5))
+
+		temp_dense = self.dense(temp_dense, 512, 512)
+		temp_dense = tf.nn.dropout(temp_dense, keep_prob=1-dropout)
+
+		temp_dense = self.dense(temp_dense, 512, self.cell_count * self.cell_count * (self.num_classes + self.boxes_per_cell * 5))
 	
 		n1 = self.cell_count * self.cell_count * self.num_classes # classification
 		n2 = n1 + self.cell_count * self.cell_count * self.boxes_per_cell # box
@@ -333,7 +338,7 @@ class Net(object):
 
 		# compute loss of predicting true class
 		# OLD: class_loss = tf.nn.l2_loss(tf.reshape(t_region_mask, (self.cell_count, self.cell_count, 1)) * (p_class - t_class)) * self.class_scale
-		class_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits_v2(labels=t_class, logits=p_class) * self.class_scale)
+		class_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits_v2(labels=t_class, logits=p_class)) * self.class_scale
 
 		# compute loss of detecting objects correctly
 		object_loss = tf.nn.l2_loss(masked_iou * (p_confidence - t_confidence)) * self.object_scale
