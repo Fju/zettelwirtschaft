@@ -1,29 +1,81 @@
 # -*- coding: utf-8 -*-
 
 import cv2
-import numpy as np
+
 import math
 from random import random as rand
 from random import shuffle
 
-class DataEntry(object):
-	def __init__(self, image):
-		self.image = image
-		self.boxes = []
+import os
+import pandas as pd
+import numpy as np
+from keras.utils import Sequence
 
-	def addBox(self, coordinates, class_num):
-		""" add bounding box to list
+class DataGenerator(Sequence):
+	IMAGE_SIZE = 256
+	NUM_CLASSES = 2
+
+	def __init__(self, train_data_dir, batch_size=10, num_samples=200, shuffle=True):
+		""" initialize generator
 		Args:
-			coordinates: 1-D Array with four elements (x, y, w, h)
-			class_num: Integer describing the class of the bounding box
+			train_data_dir:	path of directory that contains image data and labels
+			batch_size:		number of samples per batch
+			num_samples:	number of sample that the generator can use to form batches
+			shuffle:		shuffle batch at the end of one epoch
 		"""
-		# turn coordinates of corners into width, height, and coordinates of center point
-		w = coordinates[2]
-		h = coordinates[3]
-		cx = coordinates[0] + w / 2
-		cy = coordinates[1] + h / 2
-		# append box
-		self.boxes.append([cx, cy, w, h, class_num])
+		self.train_data_dir = train_data_dir
+		self.batch_size = batch_size
+		self.num_samples = num_samples
+		self.shuffle = shuffle
+
+		self.dataframe = pd.read_csv(os.path.join(train_data_dir, 'labels.csv'), sep=';')
+		sample_count = self.dataframe.shape[0]
+		#self.data_x,
+		# generate data
+		i = 0
+		while i < num_samples:
+			# cycle through available samples
+			index = i % sample_count
+			# read image
+			img = cv2.imread(os.path.join(self.train_data_dir, self.dataframe['path'].ix[index]))
+			# get box coordinates
+			box = self.parse_box(self.dataframe['price_box'].ix[index])
+
+			
+
+
+	def __len__(self):
+		""" calculates number of batches per epoch """
+		return int(self.num_samples / self.batch_size)
+
+	def __getitem__(self, index):
+		""" generate one batch 
+		Returns:
+			x:	asd
+			y:	asd	
+		"""
+		# Generate indexes of the batch
+		indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+
+		# Find list of IDs
+		list_IDs_temp = [self.list_IDs[k] for k in indexes]
+
+		# Generate data
+		X, y = self.__data_generation(list_IDs_temp)
+
+		return X, y
+
+	def parse_box(self, value):
+		""" parses string of coordinates (x, y, width, height) to array of integers
+		Args:
+			value:	string containing coordinates separated with commas
+		Returns:
+			box:	array of four integers
+		"""
+		box = [int(b) for b in value.split(',')]
+		
+		return box
+
 
 	def _crop(self, image, size, pos):
 		""" helper function to crop a numpy image
@@ -92,28 +144,12 @@ class DataEntry(object):
 
 		return rotated_image, rotated_boxes
 
-	def rand_crop_factor(self):
-		""" create a random number with modified distribution
-		Returns:
-			value: random float between 0 and 1
-		"""
-		
-		return math.sqrt(math.sqrt(rand()))
-
-	def rand_darken_factor(self):
-		""" create a random number with modified distribution
-		Returns:
-			value: random float between 0.6 and 0.9
-		"""
-		return rand() * 0.3 + 0.6
-
-	def augment(self, image_size, rotate=0.0, blur=0.0, darken=0.0, keepEmpty=False):
+	def augment(self, rotate=0.0, blur=0.0, darken=0.0, keepEmpty=False):
 		""" generate a square segment and manipulate image randomly
 		Args:
-			image_size: Integer of pixels
-			rotate: probabilty that the image will be rotated (keep 0.0 to prevent rotation)
-			blur: probability that the image will be blurred (keep 0.0 to prevent blurring)
-			keepEmpty: Boolean, if False a segment without boxes will be ignored
+			rotate:	probabilty that the image will be rotated (keep 0.0 to prevent rotation)
+			blur: 	probability that the image will be blurred (keep 0.0 to prevent blurring)
+			darken:	probability 
 		Returns:
 			valid: Boolean, if True the returned segment is valid otherwise the segment contains no information
 			segment: 3-D array, whose width and height equal to `image_size`
@@ -190,6 +226,50 @@ class DataEntry(object):
 		else:
 			# other wise we return image data, box data and box count
 			return True, segment, segment_boxes, box_count
+
+	def on_epoch_end(self):
+		'Updates indexes after each epoch'
+		self.indexes = np.arange(len(self.list_IDs))
+		if self.shuffle == True:
+			np.random.shuffle(self.indexes)
+
+	def __data_generation(self, list_IDs_temp):
+		'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+		# Initialization
+		X = np.empty((self.batch_size, *self.dim, self.n_channels))
+		y = np.empty((self.batch_size), dtype=int)
+
+		# Generate data
+		for i, ID in enumerate(list_IDs_temp):
+			# Store sample
+			X[i,] = np.load('data/' + ID + '.npy')
+
+			# Store class
+			y[i] = self.labels[ID]
+
+		return X, keras.utils.to_categorical(y, num_classes=self.n_classes)
+
+
+class DataEntry(object):
+	def __init__(self, image):
+		self.image = image
+		self.boxes = []
+
+	def addBox(self, coordinates, class_num):
+		""" add bounding box to list
+		Args:
+			coordinates: 1-D Array with four elements (x, y, w, h)
+			class_num: Integer describing the class of the bounding box
+		"""
+		# turn coordinates of corners into width, height, and coordinates of center point
+		w = coordinates[2]
+		h = coordinates[3]
+		cx = coordinates[0] + w / 2
+		cy = coordinates[1] + h / 2
+		# append box
+		self.boxes.append([cx, cy, w, h, class_num])
+
+	
 
 
 
