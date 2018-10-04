@@ -1,14 +1,12 @@
 {
-	"checkpoint_dir": "checkpoints",
-	"train_data_dir": "train_data",
-	"log_dir": "logs",
-
-	"learning_rate": 0.001,
-	"learning_rate_decay": 0.05,
-	"batch_size": 5,
-	"num_samples": 10,
-	"epochs": 10,
-	"verbosity": 1,
-
-	"image_size": 256	
+    "epochs": 10, 
+    "train_data_dir": "train_data", 
+    "log_dir": "logs", 
+    "num_samples": 10, 
+    "checkpoint_dir": "checkpoints", 
+    "learning_rate": 0.001, 
+    "image_size": 256, 
+    "verbosity": 1, 
+    "batch_size": 5, 
+    "learning_rate_decay": 0.05
 }

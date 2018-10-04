@@ -3,6 +3,7 @@ import argparse
 import json
 from net import Model
 from dataset import DataGenerator
+from utils import load_config
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model-name', default='default', help='model\'s name used for saving (or loading) checkpoints')
@@ -20,9 +21,8 @@ def main():
 		print(device_lib.list_local_devices())
 		exit()
 
-	with open('config.json', 'r') as f:
-		params = json.load(f)
-
+	params = load_config(args.config)
+	
 	training_generator = DataGenerator(params)
 
 	print(len(training_generator))
