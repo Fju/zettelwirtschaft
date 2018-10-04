@@ -1,11 +1,11 @@
 from tensorflow.keras.callbacks import TensorBoard
+import os
 
-
-def find_checkpoint(self, checkpoint_dir, model_name):
+def find_checkpoint( checkpoint_dir, model_name):
 	largest = 0
 	checkpoint_path = ''
-	for path in os.listdir(CHECKPOINT_DIR + '/'):
-		if not os.path.isfile(os.path.join(CHECKPOINT_DIR, path)):
+	for path in os.listdir(checkpoint_dir + '/'):
+		if not os.path.isfile(os.path.join(checkpoint_dir, path)):
 			# no file, skip
 			continue
 		
@@ -20,7 +20,7 @@ def find_checkpoint(self, checkpoint_dir, model_name):
 		if n > largest:
 			# store largest
 			largest = n
-			checkpoint_path = os.path.join(CHECKPOINT_DIR, path)
+			checkpoint_path = os.path.join(checkpoint_dir, path)
 
 	return checkpoint_path
 

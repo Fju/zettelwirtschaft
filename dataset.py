@@ -10,43 +10,39 @@ import numpy as np
 from tensorflow.keras.utils import Sequence, to_categorical
 
 class DataGenerator(Sequence):
-	IMAGE_SIZE = 256
-	IMAGE_CHANNELS = 3
-	NUM_CLASSES = 2
 
-	def __init__(self, train_data_dir, batch_size=2, num_samples=5, shuffle=True, useInvalid=False):
+	def __init__(self, params, shuffle=True, useInvalid=False):
 		""" initialize generator
 		Args:
-			train_data_dir:	path of directory that contains image data and labels
-			batch_size:		number of samples per batch
-			num_samples:	number of sample that the generator can use to form batches
+			params:			dictionary containing global params
 			shuffle:		shuffle indexes after each epoch
 			useInvalid:		use segments even if the bounding box is outside of the image
 		"""
-		self.train_data_dir = train_data_dir
-		self.batch_size = batch_size
-		self.num_samples = num_samples
+		self.batch_size = params['batch_size']
+		self.num_samples = params['num_samples']
+		self.image_size = params['image_size']
 		self.shuffle = shuffle
 
-		self.dataframe = pd.read_csv(os.path.join(train_data_dir, 'labels.csv'), sep=';')
+		train_data_dir = params['train_data_dir']
+		dataframe = pd.read_csv(os.path.join(train_data_dir, 'labels.csv'), sep=';')
+		sample_count = dataframe.shape[0]
 
-		sample_count = self.dataframe.shape[0]
-		self.indexes = np.arange(sample_count)
+		self.indexes = np.arange(self.num_samples)
 
 		# allocate memory for input and output data array
-		self.data_x = np.zeros([num_samples, self.IMAGE_SIZE, self.IMAGE_SIZE, self.IMAGE_CHANNELS])
-		self.data_y = np.zeros([num_samples, 4], dtype='uint16')
+		self.data_x = np.zeros([self.num_samples, self.image_size, self.image_size, 3])
+		self.data_y = np.zeros([self.num_samples, 4], dtype='uint16')
 		# generate data
 		i = 0
-		while i < num_samples:
+		while i < self.num_samples:
 			# cycle through available samples
 			index = i % sample_count
 			# read image
-			path = os.path.join(self.train_data_dir, self.dataframe['path'].ix[index]) + '.jpg'
+			path = os.path.join(train_data_dir, dataframe['path'].ix[index]) + '.jpg'
 			
 			image = cv2.imread(path)
 			# get box coordinates
-			box = self.parse_box(self.dataframe['price_box'].ix[index])
+			box = self.parse_box(dataframe['price_box'].ix[index])
 
 			valid, segment_image, segment_box = self.crop(image, box)
 
@@ -81,16 +77,16 @@ class DataGenerator(Sequence):
 
 		y = []
 		for i in indexes:
-			mask = np.zeros([self.IMAGE_SIZE, self.IMAGE_SIZE, self.NUM_CLASSES])
+			mask = np.zeros([self.image_size, self.image_size, 2])
 			
 			# create class matrix, a class is assigned to each pixel
-			temp = np.zeros([self.IMAGE_SIZE, self.IMAGE_SIZE], dtype='uint8')	
+			temp = np.zeros([self.image_size, self.image_size], dtype='uint8')	
 			bx, by, bw, bh = self.data_y[i]
 			# assign class 2 to each pixel that is inside of the bounding box
 			temp[by:by+bh, bx:bx+bw] = 1
 
 			# transform into binarized category matrix
-			y.append(to_categorical(temp, num_classes=self.NUM_CLASSES))
+			y.append(to_categorical(temp, num_classes=mask.shape[-1]))
 
 		# cast to numpy		
 		y = np.array(y)
@@ -127,17 +123,17 @@ class DataGenerator(Sequence):
 
 		segment_img = image[offset_y:offset_y+new_size, offset_x:offset_x+new_size, :]
 
-		scale_factor = self.IMAGE_SIZE / float(new_size)
+		scale_factor = self.image_size / float(new_size)
 		x = int((box[0] - offset_x) * scale_factor)
 		y = int((box[1] - offset_y) * scale_factor)
 		w = int(box[2] * scale_factor)
 		h = int(box[3] * scale_factor)
 
-		segment_img = cv2.resize(segment_img, (self.IMAGE_SIZE, self.IMAGE_SIZE))
+		segment_img = cv2.resize(segment_img, (self.image_size, self.image_size))
 		segment_box = [x, y, w, h]
 
 		# segment is valid if the bounding box is not outside of the segment
-		valid = not(x < 0 or y < 0 or x + w > self.IMAGE_SIZE or y + h > self.IMAGE_SIZE)
+		valid = not(x < 0 or y < 0 or x + w > self.image_size or y + h > self.image_size)
 		
 		return valid, segment_img, segment_box
 
