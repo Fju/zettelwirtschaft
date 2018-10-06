@@ -8,6 +8,7 @@ import os
 
 from utils import find_checkpoint, TensorBoardWrapper
 
+import tensorflow as tf
 # keras imports
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import RMSprop
@@ -16,8 +17,8 @@ from tensorflow.keras.layers import Conv2D as Conv
 from tensorflow.keras.layers import Conv2DTranspose as Deconv
 #from keras.layers import MaxPooling1D as MaxPool
 #from keras.layers import BatchNormalization as BatchNorm
-#from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
-#from keras.constraints import max_norm
+from tensorflow.keras.callbacks import ModelCheckpoint
+
 
 
 class Model(object):
@@ -76,8 +77,36 @@ class Model(object):
 		print(cp)
 
 	def train(self, generator):
-		#checkpoint_callback = ModelCheckpoint(os.path.join(CHECKPOINT_DIR, 'model.%s.{epoch:02d}.hdf5' % args.model_name), period=50)
-		#tensorboard_callback = TensorBoardWrapper(validation_generator, log_dir=os.path.join(LOG_DIR, 'run_' + args.model_name), batch_size=BATCH_SIZE, histogram_freq=10)
-		self.model.fit_generator(generator, epochs=self.params['epochs'], verbose=self.params['verbosity'])
+		checkpoint_callback = ModelCheckpoint(
+			os.path.join(self.params['checkpoint_dir'], 'model.%s.{epoch:02d}.hdf5' % self.model_name),
+			period=50
+		)
+
+		tensorboard_callback = TensorBoardWrapper(
+			generator,
+			log_dir=os.path.join(self.params['log_dir'], 'run_' + self.model_name),
+			batch_size=self.params['batch_size']
+		#	histogram_freq=10
+		)
+
+		self.model.fit_generator(
+			generator,
+			epochs=self.params['epochs'],
+			verbose=self.params['verbosity'],
+			class_weight='auto',
+			callbacks=[checkpoint_callback, tensorboard_callback]
+		)
+
+	def evaluate(self, image):
+		image = np.resize(image, [1, self.image_size, self.image_size, 3])
+
+		predictions = self.model.predict(image, batch_size=1)
+		
+		predictions = np.resize(predictions, [self.image_size, self.image_size, 2])
+
+		for y in range(self.image_size):
+			for x in range(self.image_size):
+				a, b = predictions[y, x, :]
+				print(a, b)
 
 

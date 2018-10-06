@@ -75,7 +75,7 @@ class TensorBoardWrapper(TensorBoard):
 
 	def on_epoch_end(self, epoch, logs):
 		# set validation data since tensorboard needs it to write histograms
-		x, y = self.batch_gen.get_sample(0)
-		self.validation_data = [x, y, np.ones(x.shape[0]), 0.0]
+		#x, y = self.batch_gen.get_sample(0)
+		#self.validation_data = [x, y, np.ones(x.shape[0]), 0.0]
 		return super(TensorBoardWrapper, self).on_epoch_end(epoch, logs)
 

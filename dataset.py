@@ -8,6 +8,7 @@ import cv2
 import pandas as pd
 import numpy as np
 from tensorflow.keras.utils import Sequence, to_categorical
+from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
 
 class DataGenerator(Sequence):
 
@@ -24,6 +25,8 @@ class DataGenerator(Sequence):
 		self.shuffle = shuffle
 
 		train_data_dir = params['train_data_dir']
+
+		print('generating data...')
 		dataframe = pd.read_csv(os.path.join(train_data_dir, 'labels.csv'), sep=';')
 		sample_count = dataframe.shape[0]
 
@@ -55,7 +58,7 @@ class DataGenerator(Sequence):
 
 				# increment counter
 				i += 1
-
+		print('done')
 
 	def __len__(self):
 		""" calculates number of batches per epoch """
@@ -68,6 +71,7 @@ class DataGenerator(Sequence):
 		Returns:
 			x:		input data [batch_size, image_size, image_size, image_channels]
 			y:		label data [batch_size, image_size, image_size, num_classes]
+			sample_weights
 		"""
 		# get shuffled indexes for batch
 		indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
@@ -86,10 +90,13 @@ class DataGenerator(Sequence):
 			temp[by:by+bh, bx:bx+bw] = 1
 
 			# transform into binarized category matrix
-			y.append(to_categorical(temp, num_classes=mask.shape[-1]))
+			mask = to_categorical(temp, num_classes=mask.shape[-1])
+			
+			y.append(mask)
 
-		# cast to numpy		
+		# cast to numpy
 		y = np.array(y)
+		
 
 		return x, y
 
@@ -142,5 +149,4 @@ class DataGenerator(Sequence):
 		""" shuffle indexes after each epoch """
 		if self.shuffle == True:
 			np.random.shuffle(self.indexes)
-
 

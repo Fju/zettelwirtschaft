@@ -25,10 +25,9 @@ def main():
 	
 	training_generator = DataGenerator(params)
 
-	print(len(training_generator))
 	model = Model(args.model_name, params)
 	model.train(training_generator)
-	#model.load_checkpoint()
+	
 
 
 if __name__ == '__main__':
