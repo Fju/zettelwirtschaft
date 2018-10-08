@@ -1,9 +1,9 @@
 #from tensorflow.python.client import device_lib
 import argparse
 import json
-from net import Model
-from dataset import DataGenerator
-from utils import load_config
+from zettelwirtschaft.net import Model
+from zettelwirtschaft.dataset import DataGenerator
+from zettelwirtschaft.utils import load_config
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model-name', default='default', help='model\'s name used for saving (or loading) checkpoints')
