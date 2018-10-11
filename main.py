@@ -1,9 +1,14 @@
-#from tensorflow.python.client import device_lib
 import argparse
 import json
+import cv2
+
+
 from zettelwirtschaft.net import Model
 from zettelwirtschaft.dataset import DataGenerator
 from zettelwirtschaft.utils import load_config
+
+from tensorflow.python.client import device_lib
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model-name', default='default', help='model\'s name used for saving (or loading) checkpoints')
@@ -23,10 +28,16 @@ def main():
 
 	params = load_config(args.config)
 	
-	training_generator = DataGenerator(params)
+	#training_generator = DataGenerator(params)
 
 	model = Model(args.model_name, params)
-	model.train(training_generator)
+
+	model.load_checkpoint()
+
+	test_img = cv2.imread('test_image.jpg')
+
+	model.evaluate(test_img)
+	#model.train(training_generator)
 	
 
 

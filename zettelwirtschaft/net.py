@@ -3,6 +3,7 @@
 #warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 
 import numpy as np
+import cv2
 import os
 
 
@@ -19,6 +20,7 @@ from tensorflow.keras.layers import Conv2DTranspose as Deconv
 #from keras.layers import BatchNormalization as BatchNorm
 from tensorflow.keras.callbacks import ModelCheckpoint
 
+import time
 
 
 class Model(object):
@@ -68,17 +70,17 @@ class Model(object):
 
 		optimizer = RMSprop(lr=self.params['learning_rate'], decay=self.params['learning_rate_decay'])
 
-		model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+		#model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
 		return model
 
 	def load_checkpoint(self):
 		cp = find_checkpoint(self.params['checkpoint_dir'], self.model_name)
-		print(cp)
+		self.model.load_weights(cp)
 
 	def train(self, generator):
 		checkpoint_callback = ModelCheckpoint(
-			os.path.join(self.params['checkpoint_dir'], 'model.%s.{epoch:02d}.hdf5' % self.model_name),
+			os.path.join(self.params['checkpoint_dir'], 'model.%s.{epoch:02d}.h5' % self.model_name),
 			period=50
 		)
 
@@ -98,15 +100,32 @@ class Model(object):
 		)
 
 	def evaluate(self, image):
-		image = np.resize(image, [1, self.image_size, self.image_size, 3])
+		image_size = self.params['image_size']
 
+		image = cv2.resize(image, (image_size, image_size))
+		orig_image = np.array(image, copy=True)
+ 
+		image = np.reshape(image, [1, image_size, image_size, 3]) / 128.0 - 1.0
+
+
+		start = time.time()
 		predictions = self.model.predict(image, batch_size=1)
-		
-		predictions = np.resize(predictions, [self.image_size, self.image_size, 2])
+		duration = time.time() - start
 
-		for y in range(self.image_size):
-			for x in range(self.image_size):
+		print('computation time: %.1f ms' % (duration * 1000))
+
+
+		predictions = np.resize(predictions, [image_size, image_size, 2])
+
+		mask = np.zeros([image_size, image_size, 3])
+		for y in range(image_size):
+			for x in range(image_size):
 				a, b = predictions[y, x, :]
-				print(a, b)
+				if a < b:
+					mask[y, x, :] = 255.0
+
+		cv2.imshow('orig', orig_image)
+		cv2.imshow('mask', mask)
+		cv2.waitKey()
 
 

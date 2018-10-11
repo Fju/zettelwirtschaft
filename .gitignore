@@ -3,3 +3,4 @@ checkpoints/
 train_data/
 config.json
 *.pyc
+test_image*

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import math
 from random import shuffle
 import os
@@ -8,7 +7,7 @@ import cv2
 import pandas as pd
 import numpy as np
 from tensorflow.keras.utils import Sequence, to_categorical
-from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
+#from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
 
 class DataGenerator(Sequence):
 
@@ -136,7 +135,7 @@ class DataGenerator(Sequence):
 		w = int(box[2] * scale_factor)
 		h = int(box[3] * scale_factor)
 
-		segment_img = cv2.resize(segment_img, (self.image_size, self.image_size))
+		segment_img = cv2.resize(segment_img, (self.image_size, self.image_size)) / 128.0 - 1.0
 		segment_box = [x, y, w, h]
 
 		# segment is valid if the bounding box is not outside of the segment
