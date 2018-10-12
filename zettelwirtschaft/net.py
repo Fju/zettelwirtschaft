@@ -99,14 +99,13 @@ class Model(object):
 			callbacks=[checkpoint_callback, tensorboard_callback]
 		)
 
-	def evaluate(self, image):
+	def evaluate(self, image, resize=False):		
 		image_size = self.params['image_size']
 
-		image = cv2.resize(image, (image_size, image_size))
-		orig_image = np.array(image, copy=True)
+		if resize:
+			image = cv2.resize(image, (image_size, image_size))
  
 		image = np.reshape(image, [1, image_size, image_size, 3]) / 128.0 - 1.0
-
 
 		start = time.time()
 		predictions = self.model.predict(image, batch_size=1)
@@ -124,8 +123,5 @@ class Model(object):
 				if a < b:
 					mask[y, x, :] = 255.0
 
-		cv2.imshow('orig', orig_image)
-		cv2.imshow('mask', mask)
-		cv2.waitKey()
-
+		return mask	
 

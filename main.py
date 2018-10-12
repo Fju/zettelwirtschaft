@@ -6,6 +6,7 @@ import cv2
 from zettelwirtschaft.net import Model
 from zettelwirtschaft.dataset import DataGenerator
 from zettelwirtschaft.utils import load_config
+from zettelwirtschaft.window import WindowHost
 
 from tensorflow.python.client import device_lib
 
@@ -34,9 +35,10 @@ def main():
 
 	model.load_checkpoint()
 
-	test_img = cv2.imread('test_image.jpg')
+	wh = WindowHost(params)
 
-	model.evaluate(test_img)
+	wh.show(model.evaluate)
+	
 	#model.train(training_generator)
 	
 
