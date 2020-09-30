@@ -4,7 +4,7 @@ A neural network to detect the total price printed on a super-market receipt. Th
 
 ## Training and validation data
 
-I currently maintain a dataset for training and validation of the model that contains 35 images. I collected these supermarket receipts, took pictures of them and labeled them respectively. I will add more and more labeled receipts in the future since 35 samples is too few for a robust model. When the dataset is big enough I may provide a link to download it.
+I currently maintaining a dataset for training and validation of the model that contains 35 images. I collected these supermarket receipts, took pictures of them and labeled them respectively. I will add more and more labeled receipts in the future since 35 samples is too few for a robust model. When the dataset is big enough I may provide a link to download it.
 In the meantime I crop and scale the samples randomly to augment more data.
 
 ## Arguments
